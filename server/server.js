@@ -1,25 +1,42 @@
-const express = require('express');
-const { v4: uuidv4 } = require('uuid'); // Generate unique room IDs
+const express = require("express");
+const http = require("http");
+const { Server } = require("socket.io");
+const cors = require("cors");
+
 const app = express();
-const PORT = 5000;
+app.use(cors());
 
-app.use(express.json());
-
-// In-memory storage for rooms (for demonstration purposes)
-let rooms = [];
-
-// Create a room
-app.post('/api/create-room', (req, res) => {
-  const roomId = uuidv4(); // Generate a unique room ID
-  rooms.push(roomId);
-  res.json({ roomId });
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"],
+  },
 });
 
-// List all rooms (optional, for debugging)
-app.get('/api/rooms', (req, res) => {
-  res.json({ rooms });
+io.on("connection", (socket) => {
+  console.log("A user connected:", socket.id);
+
+  socket.on("join-room", (roomId) => {
+    socket.join(roomId);
+    console.log(`${socket.id} joined room ${roomId}`);
+    socket.broadcast.to(roomId).emit("user-joined", { signal: null });
+
+    socket.on("return-signal", ({ signal }) => {
+      socket.broadcast.to(roomId).emit("receive-signal", { signal });
+    });
+
+    socket.on("leave-room", (roomId) => {
+      socket.leave(roomId);
+      console.log(`${socket.id} left room ${roomId}`);
+    });
+  });
+
+  socket.on("disconnect", () => {
+    console.log("User disconnected:", socket.id);
+  });
 });
 
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+server.listen(5000, () => {
+  console.log("Server is running on port 5000");
 });
