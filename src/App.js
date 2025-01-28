@@ -18,11 +18,14 @@ function App() {
   const [joined, setJoined] = useState(false);
   const [muted, setMuted] = useState(false);
   const [videoOff, setVideoOff] = useState(false);
+  const [messages, setMessages] = useState([]); // Store chat messages
+  const [messageInput, setMessageInput] = useState("");
+  const [participants, setParticipants] = useState([]); // Store participant names
   const videoRef = useRef(null);
 
   // Create Room and Generate Random Room ID
   const createRoom = async () => {
-    const generatedRoomId = Math.random().toString(36).substring(2, 10); // Generate random Room ID
+    const generatedRoomId = Math.random().toString(36).substring(2, 10);
     setRoomId(generatedRoomId);
     joinRoom(generatedRoomId);
   };
@@ -43,14 +46,24 @@ function App() {
       setStream(mediaStream);
       setJoined(true);
 
-      // Attach the local stream to videoRef
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
       }
 
-      socket.emit("join-room", id || roomId);
+      const currentRoomId = id || roomId;
+      setRoomId(currentRoomId);
+      socket.emit("join-room", currentRoomId);
 
-      // When a new user joins, create a peer
+      // Update participants list
+      socket.on("update-participants", (participantsList) => {
+        setParticipants(participantsList);
+      });
+
+      // Handle new chat messages
+      socket.on("chat-message", (message) => {
+        setMessages((prevMessages) => [...prevMessages, message]);
+      });
+
       socket.on("user-joined", (peerSignal) => {
         const peer = new SimplePeer({
           initiator: false,
@@ -59,18 +72,15 @@ function App() {
 
         peer.signal(peerSignal);
         peer.on("stream", (peerStream) => {
-          console.log("Received peer stream");
           setPeers((prev) => [...prev, { id: Math.random(), stream: peerStream }]);
         });
       });
 
-      // Handle incoming signals
       socket.on("receive-signal", ({ signal }) => {
         const peer = new SimplePeer({ initiator: true, stream: mediaStream });
 
         peer.signal(signal);
         peer.on("stream", (peerStream) => {
-          console.log("Received peer stream");
           setPeers((prev) => [...prev, { id: Math.random(), stream: peerStream }]);
         });
 
@@ -83,32 +93,98 @@ function App() {
   };
 
   // Toggle Mute
-  const toggleMute = () => {
-    setMuted((prevMuted) => {
-      const audioTrack = stream.getAudioTracks()[1];
-      if (audioTrack) audioTrack.enabled = !prevMuted;
-      return !prevMuted;
-    });
-  };
+const toggleMute = () => {
+  setMuted((prevMuted) => {
+    const audioTrack = stream.getAudioTracks()[0]; // Get the audio track from the stream
+    if (audioTrack) {
+      // Toggle the 'enabled' property of the audio track
+      audioTrack.enabled = !prevMuted;
+    }
+    return !prevMuted; // Toggle the mute state
+  });
+};
 
-  
 
   // Toggle Video
   const toggleVideo = () => {
     setVideoOff((prevVideoOff) => {
       const videoTrack = stream.getVideoTracks()[0];
-      if (videoTrack) videoTrack.enabled =!prevVideoOff;
+      if (videoTrack) videoTrack.enabled = !prevVideoOff;
       return !prevVideoOff;
     });
   };
 
+  // Send a chat message
+  const sendMessage = () => {
+    if (messageInput.trim() !== "") {
+      const message = { text: messageInput, sender: "You" };
+      setMessages((prevMessages) => [...prevMessages, message]);
+      socket.emit("send-message", { roomId, text: messageInput });
+      setMessageInput("");
+    }
+  };
+
+  // Add this inside the videoContainer section
+<div style={styles.gridContainer}>
+  <video ref={videoRef} autoPlay muted style={styles.video}></video>
+  {peers.map((peer, index) => (
+    <PeerVideo key={peer.id} stream={peer.stream} />
+  ))}
+</div>
+
+
+
+  // Handle emoji reaction
+const sendEmojiReaction = (emoji) => {
+  const reactionMessage = {
+    text: emoji,
+    sender: "You",
+    type: "reaction",
+  };
+  socket.emit("send-message", { roomId, text: emoji, type: "reaction" });
+  setMessages((prevMessages) => [...prevMessages, reactionMessage]);
+};
+
+// Add Emoji button
+<div>
+  <button style={styles.controlButton} onClick={() => sendEmojiReaction("😊")}>
+    😊
+  </button>
+  <button style={styles.controlButton} onClick={() => sendEmojiReaction("😢")}>
+    😢
+  </button>
+</div>
+
+
+  // Function to start screen sharing
+const startScreenSharing = async () => {
+  try {
+    const screenStream = await navigator.mediaDevices.getDisplayMedia({
+      video: { cursor: "always" }, // You can modify video settings as per requirement
+    });
+    setStream(screenStream);
+    videoRef.current.srcObject = screenStream;
+    
+    // Update peer streams with the screen stream
+    peers.forEach((peer) => {
+      peer.peer.replaceTrack(peer.peer.getVideoTracks()[0], screenStream.getVideoTracks()[0], stream);
+    });
+  } catch (error) {
+    console.error("Error sharing the screen:", error);
+  }
+};
+
+// Add Screen Share button in controls
+<button style={styles.controlButton} onClick={startScreenSharing}>
+  Share Screen
+</button>
+
+
   useEffect(() => {
     if (stream && videoRef.current) {
       videoRef.current.srcObject = stream;
-      console.log("Local video stream attached", stream);
     }
   }, [stream]);
-  
 
   // Leave Room
   const leaveRoom = () => {
@@ -117,6 +193,7 @@ function App() {
     setPeers([]);
     setJoined(false);
     setRoomId("");
+    setParticipants([]);
   };
 
   return (
@@ -143,31 +220,52 @@ function App() {
       ) : (
         <div>
           <h1 style={styles.roomHeading}>Room: {roomId}</h1>
+          <p>
+            Share this link to invite others:{" "}
+            <a href={`http://localhost:3000/?roomId=${roomId}`}>
+              {`http://localhost:3000/?roomId=${roomId}`}
+            </a>
+          </p>
+          <div style={styles.participants}>
+            <h3>Participants:</h3>
+            <ul>
+              {participants.map((participant, index) => (
+                <li key={index}>{participant}</li>
+              ))}
+            </ul>
+          </div>
           <div style={styles.videoContainer}>
-            <video
-              ref={videoRef}
-              autoPlay
-              muted
-              style={styles.video}
-            ></video>
+            <video ref={videoRef} autoPlay muted style={styles.video}></video>
             {peers.map((peer, index) => (
               <PeerVideo key={peer.id} stream={peer.stream} />
             ))}
           </div>
+          <div style={styles.chatContainer}>
+            <h3>Chat:</h3>
+            <div style={styles.messages}>
+              {messages.map((message, index) => (
+                <p key={index}>
+                  <strong>{message.sender}:</strong> {message.text}
+                </p>
+              ))}
+            </div>
+            <input
+              type="text"
+              value={messageInput}
+              onChange={(e) => setMessageInput(e.target.value)}
+              placeholder="Type a message"
+              style={styles.input}
+            />
+            <button onClick={sendMessage} style={styles.button}>
+              Send
+            </button>
+          </div>
           <div style={styles.controls}>
             <button style={styles.controlButton} onClick={toggleMute}>
-              {muted ? (
-                <FaMicrophoneSlash style={styles.icon} />
-              ) : (
-                <FaMicrophone style={styles.icon} />
-              )}
+              {muted ? <FaMicrophoneSlash style={styles.icon} /> : <FaMicrophone style={styles.icon} />}
             </button>
             <button style={styles.controlButton} onClick={toggleVideo}>
-              {videoOff ? (
-                <FaVideoSlash style={styles.icon} />
-              ) : (
-                <FaVideo style={styles.icon} />
-              )}
+              {videoOff ? <FaVideoSlash style={styles.icon} /> : <FaVideo style={styles.icon} />}
             </button>
             <button style={styles.controlButton} onClick={leaveRoom}>
               <FaPhoneSlash style={{ ...styles.icon, color: "red" }} />
@@ -179,7 +277,6 @@ function App() {
   );
 }
 
-// Separate Component for Peer Videos
 const PeerVideo = ({ stream }) => {
   const videoRef = useRef();
 
@@ -267,12 +364,7 @@ const styles = {
   controls: {
     display: "flex",
     justifyContent: "center",
-    marginTop: "20px",
-    gap: "20px",
-  },
-  controlButton: {
-    padding: "12px",
-    borderRadius: "50%",
+    marginTop: "20px", 
     border: "none",
     backgroundColor: "#f3f4f6",
     cursor: "pointer",
