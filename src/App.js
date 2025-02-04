@@ -114,6 +114,8 @@ const toggleMute = () => {
     });
   };
 
+  
+
   // Send a chat message
   const sendMessage = () => {
     if (messageInput.trim() !== "") {
