@@ -1,386 +1,301 @@
-import React, { useRef, useState, useEffect } from "react";
-import io from "socket.io-client";
-import SimplePeer from "simple-peer";
-import {
-  FaMicrophone,
-  FaMicrophoneSlash,
-  FaVideo,
-  FaVideoSlash,
-  FaPhoneSlash,
-} from "react-icons/fa";
+import React, { useState, useRef, useEffect } from 'react';
+import './App.css';
 
-const socket = io("http://localhost:5000"); // Backend server
+// Add FontAwesome CDN
+const fontAwesomeCDN = document.createElement("link");
+fontAwesomeCDN.rel = "stylesheet";
+fontAwesomeCDN.href = "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css";
+document.head.appendChild(fontAwesomeCDN);
 
 function App() {
-  const [stream, setStream] = useState(null);
-  const [peers, setPeers] = useState([]);
-  const [roomId, setRoomId] = useState("");
-  const [joined, setJoined] = useState(false);
-  const [muted, setMuted] = useState(false);
-  const [videoOff, setVideoOff] = useState(false);
-  const [messages, setMessages] = useState([]); // Store chat messages
-  const [messageInput, setMessageInput] = useState("");
-  const [participants, setParticipants] = useState([]); // Store participant names
-  const videoRef = useRef(null);
+  const [roomId, setRoomId] = useState('');
+  const [username, setUsername] = useState('');
+  const [isInRoom, setIsInRoom] = useState(false);
+  const [isCameraOn, setIsCameraOn] = useState(false);
+  const [isMicOn, setIsMicOn] = useState(false);
+  const [messages, setMessages] = useState([]);
+  const [emojiReactions, setEmojiReactions] = useState([]);
+  const [mediaStream, setMediaStream] = useState(null);
+  const [screenStream, setScreenStream] = useState(null); // State for screen-sharing stream
+  const [isCreatingRoom, setIsCreatingRoom] = useState(false);
+  const videoRef = useRef(null); // Ref for camera video
+  const screenRef = useRef(null); // Ref for screen-sharing video
 
-  // Create Room and Generate Random Room ID
-  const createRoom = async () => {
-    const generatedRoomId = Math.random().toString(36).substring(2, 10);
-    setRoomId(generatedRoomId);
-    joinRoom(generatedRoomId);
+  // Use useEffect to handle video stream assignment
+  useEffect(() => {
+    if (videoRef.current && mediaStream) {
+      videoRef.current.srcObject = mediaStream;
+    }
+  }, [mediaStream]);
+
+  // Use useEffect to handle screen-sharing stream assignment
+  useEffect(() => {
+    if (screenRef.current && screenStream) {
+      screenRef.current.srcObject = screenStream;
+    }
+  }, [screenStream]);
+
+  // Handle room join
+  const handleJoinRoom = () => {
+    if (roomId && username) {
+      setIsInRoom(true);
+      console.log(`Joined room ${roomId} as ${username}`);
+      startVideoStream(); // Start video stream when joining
+    }
   };
 
-  // Join Room
-  const joinRoom = async (id) => {
-    if (!id && !roomId) {
-      alert("Enter a Room ID to join!");
-      return;
-    }
+  // Handle room creation
+  const handleCreateRoom = () => {
+    const newRoomId = Math.random().toString(36).substr(2, 9); // Generate random room ID
+    setRoomId(newRoomId);
+    setIsCreatingRoom(false);
+    setIsInRoom(true);
+    console.log(`Room ${newRoomId} created.`);
+    startVideoStream(); // Start video stream when creating room
+  };
 
+  // Start video stream (getUserMedia)
+  const startVideoStream = async () => {
     try {
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: "user", // Use front camera
+          width: { ideal: 1280 }, // Specify the width
+          height: { ideal: 720 }, // Specify the height
+        },
+        audio: true,
+      });
+
+      setMediaStream(stream);
+      setIsCameraOn(true);
+      setIsMicOn(true);
+
+      console.log("Video stream started.");
+    } catch (error) {
+      console.error("Error accessing media devices:", error);
+      alert("Unable to access the camera or microphone. Please check permissions.");
+    }
+  };
+
+  // Stop video stream
+  const stopVideoStream = () => {
+    if (mediaStream) {
+      const tracks = mediaStream.getTracks();
+      tracks.forEach((track) => track.stop());
+      setMediaStream(null);
+      setIsCameraOn(false);
+      setIsMicOn(false);
+    }
+  };
+
+  // Start screen sharing
+  const startScreenSharing = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getDisplayMedia({
         video: true,
         audio: true,
       });
 
-      setStream(mediaStream);
-      setJoined(true);
+      setScreenStream(stream);
+      console.log("Screen sharing started.");
 
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
-      }
-
-      const currentRoomId = id || roomId;
-      setRoomId(currentRoomId);
-      socket.emit("join-room", currentRoomId);
-
-      // Update participants list
-      socket.on("update-participants", (participantsList) => {
-        setParticipants(participantsList);
-      });
-
-      // Handle new chat messages
-      socket.on("chat-message", (message) => {
-        setMessages((prevMessages) => [...prevMessages, message]);
-      });
-
-      socket.on("user-joined", (peerSignal) => {
-        const peer = new SimplePeer({
-          initiator: false,
-          stream: mediaStream,
-        });
-
-        peer.signal(peerSignal);
-        peer.on("stream", (peerStream) => {
-          setPeers((prev) => [...prev, { id: Math.random(), stream: peerStream }]);
-        });
-      });
-
-      socket.on("receive-signal", ({ signal }) => {
-        const peer = new SimplePeer({ initiator: true, stream: mediaStream });
-
-        peer.signal(signal);
-        peer.on("stream", (peerStream) => {
-          setPeers((prev) => [...prev, { id: Math.random(), stream: peerStream }]);
-        });
-
-        socket.emit("return-signal", { signal: peer.signal() });
-      });
+      // Handle when the user stops screen sharing
+      stream.getVideoTracks()[0].onended = () => {
+        setScreenStream(null);
+        console.log("Screen sharing stopped.");
+      };
     } catch (error) {
-      console.error("Error accessing media devices:", error);
-      alert("Could not access media devices. Please check your permissions.");
+      console.error("Error accessing screen sharing:", error);
+      alert("Unable to start screen sharing. Please check permissions.");
     }
   };
 
-  // Toggle Mute
-const toggleMute = () => {
-  setMuted((prevMuted) => {
-    const audioTrack = stream.getAudioTracks()[0]; // Get the audio track from the stream
-    if (audioTrack) {
-      // Toggle the 'enabled' property of the audio track
-      audioTrack.enabled = !prevMuted;
-    }
-    return !prevMuted; // Toggle the mute state
-  });
-};
-
-
-  // Toggle Video
-  const toggleVideo = () => {
-    setVideoOff((prevVideoOff) => {
-      const videoTrack = stream.getVideoTracks()[0];
-      if (videoTrack) videoTrack.enabled = !prevVideoOff;
-      return !prevVideoOff;
-    });
-  };
-
-  
-
-  // Send a chat message
-  const sendMessage = () => {
-    if (messageInput.trim() !== "") {
-      const message = { text: messageInput, sender: "You" };
-      setMessages((prevMessages) => [...prevMessages, message]);
-      socket.emit("send-message", { roomId, text: messageInput });
-      setMessageInput("");
+  // Stop screen sharing
+  const stopScreenSharing = () => {
+    if (screenStream) {
+      const tracks = screenStream.getTracks();
+      tracks.forEach((track) => track.stop());
+      setScreenStream(null);
     }
   };
 
-  // Add this inside the videoContainer section
-<div style={styles.gridContainer}>
-  <video ref={videoRef} autoPlay muted style={styles.video}></video>
-  {peers.map((peer, index) => (
-    <PeerVideo key={peer.id} stream={peer.stream} />
-  ))}
-</div>
-
-
-
-  // Handle emoji reaction
-const sendEmojiReaction = (emoji) => {
-  const reactionMessage = {
-    text: emoji,
-    sender: "You",
-    type: "reaction",
-  };
-  socket.emit("send-message", { roomId, text: emoji, type: "reaction" });
-  setMessages((prevMessages) => [...prevMessages, reactionMessage]);
-};
-
-// Add Emoji button
-<div>
-  <button style={styles.controlButton} onClick={() => sendEmojiReaction("😊")}>
-    😊
-  </button>
-  <button style={styles.controlButton} onClick={() => sendEmojiReaction("😢")}>
-    😢
-  </button>
-</div>
-
-
-  // Function to start screen sharing
-const startScreenSharing = async () => {
-  try {
-    const screenStream = await navigator.mediaDevices.getDisplayMedia({
-      video: { cursor: "always" }, // You can modify video settings as per requirement
-    });
-    setStream(screenStream);
-    videoRef.current.srcObject = screenStream;
-    
-    // Update peer streams with the screen stream
-    peers.forEach((peer) => {
-      peer.peer.replaceTrack(peer.peer.getVideoTracks()[0], screenStream.getVideoTracks()[0], stream);
-    });
-  } catch (error) {
-    console.error("Error sharing the screen:", error);
-  }
-};
-
-// Add Screen Share button in controls
-<button style={styles.controlButton} onClick={startScreenSharing}>
-  Share Screen
-</button>
-
-
-  useEffect(() => {
-    if (stream && videoRef.current) {
-      videoRef.current.srcObject = stream;
+  // Handle camera toggle
+  const toggleCamera = () => {
+    if (isCameraOn) {
+      stopVideoStream(); // Stop video stream if camera is on
+    } else {
+      startVideoStream(); // Start video stream if camera is off
     }
-  }, [stream]);
+  };
 
-  // Leave Room
-  const leaveRoom = () => {
-    socket.emit("leave-room", roomId);
-    setStream(null);
-    setPeers([]);
-    setJoined(false);
-    setRoomId("");
-    setParticipants([]);
+  // Handle microphone toggle
+  const toggleMic = () => {
+    if (mediaStream) {
+      const audioTrack = mediaStream.getAudioTracks()[0];
+      audioTrack.enabled = !audioTrack.enabled; // Mute/unmute the microphone
+      setIsMicOn(audioTrack.enabled);
+    }
+  };
+
+  // Handle send emoji reaction
+  const sendEmojiReaction = (emoji) => {
+    setEmojiReactions((prevReactions) => [...prevReactions, emoji]);
+  };
+
+  // Handle message sending
+  const sendMessage = (message) => {
+    setMessages([...messages, { sender: username, text: message }]);
+  };
+
+  // Handle room exit
+  const handleExitRoom = () => {
+    stopVideoStream(); // Stop video when exiting room
+    stopScreenSharing(); // Stop screen sharing when exiting room
+    setIsInRoom(false);
+    setRoomId('');
+    setUsername('');
+    setMessages([]);
+    setEmojiReactions([]);
   };
 
   return (
-    <div style={styles.container}>
-      {!joined ? (
-        <>
-          <h1 style={styles.heading}>Virtual Meeting</h1>
-          <input
-            type="text"
-            placeholder="Enter Room ID"
-            value={roomId}
-            onChange={(e) => setRoomId(e.target.value)}
-            style={styles.input}
-          />
-          <div style={styles.mainButtons}>
-            <button style={styles.button} onClick={() => joinRoom()}>
-              Join Room
-            </button>
-            <button style={styles.button} onClick={createRoom}>
-              Create Room
-            </button>
-          </div>
-        </>
+    <div className="container">
+      <h1 className="heading">Virtual Event Room</h1>
+
+      {/* Room Input Section */}
+      {!isInRoom ? (
+        <div>
+          {!isCreatingRoom ? (
+            <div>
+              <input
+                type="text"
+                placeholder="Enter Room ID"
+                value={roomId}
+                onChange={(e) => setRoomId(e.target.value)}
+                className="input"
+              />
+              <input
+                type="text"
+                placeholder="Enter Your Name"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="input"
+              />
+              <div className="mainButtons">
+                <button onClick={handleJoinRoom} className="button">
+                  Join Room
+                </button>
+                <button onClick={() => setIsCreatingRoom(true)} className="button">
+                  Create Room
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div>
+              <h3>Creating Room...</h3>
+              <button onClick={handleCreateRoom} className="button">
+                Create Room with ID: {roomId}
+              </button>
+              <button onClick={() => setIsCreatingRoom(false)} className="button">
+                Cancel
+              </button>
+            </div>
+          )}
+        </div>
       ) : (
         <div>
-          <h1 style={styles.roomHeading}>Room: {roomId}</h1>
-          <p>
-            Share this link to invite others:{" "}
-            <a href={`http://localhost:3000/?roomId=${roomId}`}>
-              {`http://localhost:3000/?roomId=${roomId}`}
-            </a>
-          </p>
-          <div style={styles.participants}>
-            <h3>Participants:</h3>
-            <ul>
-              {participants.map((participant, index) => (
-                <li key={index}>{participant}</li>
-              ))}
-            </ul>
+          <h2>Welcome to the room, {username}</h2>
+
+          {/* Video Stream */}
+          <div className="videoContainer">
+            {isCameraOn && (
+              <video
+                ref={videoRef}
+                autoPlay
+                muted={!isMicOn} // Mute video when mic is off
+                className="video"
+              />
+            )}
+            {screenStream && (
+              <video
+                ref={screenRef}
+                autoPlay
+                muted
+                className="video"
+              />
+            )}
           </div>
-          <div style={styles.videoContainer}>
-            <video ref={videoRef} autoPlay muted style={styles.video}></video>
-            {peers.map((peer, index) => (
-              <PeerVideo key={peer.id} stream={peer.stream} />
-            ))}
+
+          {/* Controls */}
+          <div className="controls">
+            <button onClick={toggleCamera} className="controlButton" title={isCameraOn ? "Turn Camera Off" : "Turn Camera On"}>
+              <i className={`fa ${isCameraOn ? "fa-video" : "fa-video-slash"}`}></i> {/* Camera icon */}
+            </button>
+            <button onClick={toggleMic} className="controlButton" title={isMicOn ? "Mute Mic" : "Unmute Mic"}>
+              <i className={`fa ${isMicOn ? "fa-microphone" : "fa-microphone-slash"}`}></i> {/* Microphone icon */}
+            </button>
+            <button
+              onClick={screenStream ? stopScreenSharing : startScreenSharing}
+              className="controlButton"
+              title={screenStream ? "Stop Screen Sharing" : "Start Screen Sharing"}
+            >
+              <i className={`fa ${screenStream ? "fa-stop" : "fa-share-square"}`}></i> {/* Screen sharing icon */}
+            </button>
+            <button onClick={handleExitRoom} className="controlButton" title="End Call">
+              <i className="fa fa-phone-slash"></i> {/* End call icon */}
+            </button>
           </div>
-          <div style={styles.chatContainer}>
-            <h3>Chat:</h3>
-            <div style={styles.messages}>
-              {messages.map((message, index) => (
-                <p key={index}>
-                  <strong>{message.sender}:</strong> {message.text}
-                </p>
+
+          {/* Emoji Reactions */}
+          <div>
+            <button onClick={() => sendEmojiReaction('😊')} className="emojiButton">
+              😊
+            </button>
+            <button onClick={() => sendEmojiReaction('👍')} className="emojiButton">
+              👍
+            </button>
+            <button onClick={() => sendEmojiReaction('🎉')} className="emojiButton">
+              🎉
+            </button>
+          </div>
+
+          {/* Display Emoji Reactions */}
+          <div className="emojiReactions">
+            <h3>Emoji Reactions:</h3>
+            <div>
+              {emojiReactions.map((emoji, index) => (
+                <span key={index} className="emoji">
+                  {emoji}
+                </span>
               ))}
             </div>
-            <input
-              type="text"
-              value={messageInput}
-              onChange={(e) => setMessageInput(e.target.value)}
-              placeholder="Type a message"
-              style={styles.input}
-            />
-            <button onClick={sendMessage} style={styles.button}>
-              Send
-            </button>
           </div>
-          <div style={styles.controls}>
-            <button style={styles.controlButton} onClick={toggleMute}>
-              {muted ? <FaMicrophoneSlash style={styles.icon} /> : <FaMicrophone style={styles.icon} />}
-            </button>
-            <button style={styles.controlButton} onClick={toggleVideo}>
-              {videoOff ? <FaVideoSlash style={styles.icon} /> : <FaVideo style={styles.icon} />}
-            </button>
-            <button style={styles.controlButton} onClick={leaveRoom}>
-              <FaPhoneSlash style={{ ...styles.icon, color: "red" }} />
-            </button>
+
+          {/* Chat Section */}
+          <div className="chatWindow">
+            {messages.map((message, index) => (
+              <div key={index} className="message">
+                <span className="sender">{message.sender}:</span>{' '}
+                <span className="text">{message.text}</span>
+              </div>
+            ))}
           </div>
+
+          <input
+            type="text"
+            placeholder="Send a message"
+            className="input"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                sendMessage(e.target.value);
+                e.target.value = '';
+              }
+            }}
+          />
         </div>
       )}
     </div>
   );
 }
-
-const PeerVideo = ({ stream }) => {
-  const videoRef = useRef();
-
-  useEffect(() => {
-    if (videoRef.current) {
-      videoRef.current.srcObject = stream;
-    }
-  }, [stream]);
-
-  return <video ref={videoRef} autoPlay style={styles.video}></video>;
-};
-
-const styles = {
-  container: {
-    textAlign: "center",
-    marginTop: "50px",
-    fontFamily: "'Roboto', Arial, sans-serif",
-    backgroundColor: "#f5f5f5",
-    padding: "20px",
-    borderRadius: "12px",
-    maxWidth: "800px",
-    margin: "0 auto",
-    boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
-  },
-  heading: {
-    fontSize: "36px",
-    color: "#3b82f6",
-    marginBottom: "20px",
-    fontWeight: "bold",
-    textShadow: "1px 1px 2px rgba(0, 0, 0, 0.1)",
-  },
-  input: {
-    padding: "12px",
-    fontSize: "16px",
-    borderRadius: "8px",
-    border: "1px solid #d1d5db",
-    marginBottom: "20px",
-    width: "80%",
-    boxShadow: "inset 0 2px 4px rgba(0, 0, 0, 0.05)",
-  },
-  mainButtons: {
-    display: "flex",
-    justifyContent: "center",
-    gap: "15px",
-    marginTop: "20px",
-  },
-  button: {
-    padding: "12px 24px",
-    fontSize: "16px",
-    fontWeight: "500",
-    backgroundColor: "#3b82f6",
-    color: "white",
-    border: "none",
-    borderRadius: "8px",
-    cursor: "pointer",
-    transition: "background-color 0.3s ease",
-    boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
-  },
-  buttonHover: {
-    backgroundColor: "#2563eb",
-  },
-  roomHeading: {
-    fontSize: "28px",
-    color: "#111827",
-    marginBottom: "20px",
-    fontWeight: "600",
-  },
-  videoContainer: {
-    display: "flex",
-    flexWrap: "wrap",
-    justifyContent: "center",
-    gap: "20px",
-  },
-  video: {
-    width: "300px",
-    height: "200px",
-    borderRadius: "12px",
-    backgroundColor: "#000",
-    boxShadow: "0 4px 8px rgba(0, 0, 0, 0.2)",
-    transition: "transform 0.2s ease",
-  },
-  videoHover: {
-    transform: "scale(1.05)",
-  },
-  controls: {
-    display: "flex",
-    justifyContent: "center",
-    marginTop: "20px", 
-    border: "none",
-    backgroundColor: "#f3f4f6",
-    cursor: "pointer",
-    boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
-    transition: "background-color 0.3s ease",
-  },
-  controlButtonHover: {
-    backgroundColor: "#e5e7eb",
-  },
-  icon: {
-    fontSize: "20px",
-    color: "#111827",
-  },
-};
-
 
 export default App;
