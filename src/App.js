@@ -16,8 +16,15 @@ function App() {
   const [messages, setMessages] = useState([]);
   const [emojiReactions, setEmojiReactions] = useState([]);
   const [mediaStream, setMediaStream] = useState(null);
-  const [screenStream, setScreenStream] = useState(null); // State for screen-sharing stream
+  const [screenStream, setScreenStream] = useState(null);
   const [isCreatingRoom, setIsCreatingRoom] = useState(false);
+  const [users, setUsers] = useState([]); // List of users in the room
+  const [recorder, setRecorder] = useState(null); // For recording
+  const [recordedChunks, setRecordedChunks] = useState([]); // For recording
+  const [raisedHands, setRaisedHands] = useState([]); // For raise hand feature
+  const [polls, setPolls] = useState([]); // For polling feature
+  const [activePoll, setActivePoll] = useState(null); // For active poll
+
   const videoRef = useRef(null); // Ref for camera video
   const screenRef = useRef(null); // Ref for screen-sharing video
 
@@ -39,8 +46,10 @@ function App() {
   const handleJoinRoom = () => {
     if (roomId && username) {
       setIsInRoom(true);
+      addUser(username); // Add user to the list
       console.log(`Joined room ${roomId} as ${username}`);
       startVideoStream(); // Start video stream when joining
+      sendMessage(`${username} has joined the room.`); // Welcome message
     }
   };
 
@@ -50,8 +59,10 @@ function App() {
     setRoomId(newRoomId);
     setIsCreatingRoom(false);
     setIsInRoom(true);
+    addUser(username); // Add user to the list
     console.log(`Room ${newRoomId} created.`);
     startVideoStream(); // Start video stream when creating room
+    sendMessage(`${username} has created the room.`); // Welcome message
   };
 
   // Start video stream (getUserMedia)
@@ -143,8 +154,15 @@ function App() {
   };
 
   // Handle message sending
-  const sendMessage = (message) => {
-    setMessages([...messages, { sender: username, text: message }]);
+  const sendMessage = (message, isPrivate = false, recipient = null) => {
+    const newMessage = {
+      sender: username,
+      text: message,
+      timestamp: new Date().toLocaleTimeString(),
+      isPrivate,
+      recipient,
+    };
+    setMessages([...messages, newMessage]);
   };
 
   // Handle room exit
@@ -152,10 +170,85 @@ function App() {
     stopVideoStream(); // Stop video when exiting room
     stopScreenSharing(); // Stop screen sharing when exiting room
     setIsInRoom(false);
+    removeUser(username); // Remove user from the list
     setRoomId('');
     setUsername('');
     setMessages([]);
     setEmojiReactions([]);
+  };
+
+  // Add user to the list
+  const addUser = (username) => {
+    setUsers((prevUsers) => [...prevUsers, username]);
+  };
+
+  // Remove user from the list
+  const removeUser = (username) => {
+    setUsers((prevUsers) => prevUsers.filter((user) => user !== username));
+  };
+
+  // Start recording
+  const startRecording = async () => {
+    const stream = videoRef.current.srcObject;
+    const mediaRecorder = new MediaRecorder(stream);
+
+    mediaRecorder.ondataavailable = (event) => {
+      if (event.data.size > 0) {
+        setRecordedChunks((prev) => [...prev, event.data]);
+      }
+    };
+
+    mediaRecorder.start();
+    setRecorder(mediaRecorder);
+  };
+
+  // Stop recording
+  const stopRecording = () => {
+    if (recorder) {
+      recorder.stop();
+      setRecorder(null);
+    }
+  };
+
+  // Download recording
+  const downloadRecording = () => {
+    const blob = new Blob(recordedChunks, { type: 'video/webm' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'recording.webm';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // Toggle raise/lower hand
+  const toggleRaiseHand = () => {
+    if (raisedHands.includes(username)) {
+      setRaisedHands((prev) => prev.filter((user) => user !== username));
+      sendMessage(`✋ ${username} has lowered their hand.`);
+    } else {
+      setRaisedHands((prev) => [...prev, username]);
+      sendMessage(`✋ ${username} has raised their hand.`);
+    }
+  };
+
+  // Create poll
+  const createPoll = (question, options) => {
+    const newPoll = {
+      question,
+      options: options.map((option) => ({ text: option, votes: 0 })),
+    };
+    setPolls((prev) => [...prev, newPoll]);
+    setActivePoll(newPoll);
+  };
+
+  // Vote in poll
+  const voteInPoll = (pollIndex, optionIndex) => {
+    setPolls((prev) => {
+      const updatedPolls = [...prev];
+      updatedPolls[pollIndex].options[optionIndex].votes += 1;
+      return updatedPolls;
+    });
   };
 
   return (
@@ -203,95 +296,180 @@ function App() {
           )}
         </div>
       ) : (
-        <div>
-          <h2>Welcome to the room, {username}</h2>
+        <div className="roomContainer">
+          {/* Left Side: Video and Controls */}
+          <div className="videoSection">
+            <h2>Welcome to the room, {username}</h2>
 
-          {/* Video Stream */}
-          <div className="videoContainer">
-            {isCameraOn && (
-              <video
-                ref={videoRef}
-                autoPlay
-                muted={!isMicOn} // Mute video when mic is off
-                className="video"
-              />
-            )}
-            {screenStream && (
-              <video
-                ref={screenRef}
-                autoPlay
-                muted
-                className="video"
-              />
-            )}
-          </div>
+            {/* Video Stream */}
+            <div className="videoContainer">
+              {isCameraOn && (
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  muted={!isMicOn} // Mute video when mic is off
+                  className="video"
+                />
+              )}
+              {screenStream && (
+                <video
+                  ref={screenRef}
+                  autoPlay
+                  muted
+                  className="video"
+                />
+              )}
+            </div>
 
-          {/* Controls */}
-          <div className="controls">
-            <button onClick={toggleCamera} className="controlButton" title={isCameraOn ? "Turn Camera Off" : "Turn Camera On"}>
-              <i className={`fa ${isCameraOn ? "fa-video" : "fa-video-slash"}`}></i> {/* Camera icon */}
-            </button>
-            <button onClick={toggleMic} className="controlButton" title={isMicOn ? "Mute Mic" : "Unmute Mic"}>
-              <i className={`fa ${isMicOn ? "fa-microphone" : "fa-microphone-slash"}`}></i> {/* Microphone icon */}
-            </button>
-            <button
-              onClick={screenStream ? stopScreenSharing : startScreenSharing}
-              className="controlButton"
-              title={screenStream ? "Stop Screen Sharing" : "Start Screen Sharing"}
-            >
-              <i className={`fa ${screenStream ? "fa-stop" : "fa-share-square"}`}></i> {/* Screen sharing icon */}
-            </button>
-            <button onClick={handleExitRoom} className="controlButton" title="End Call">
-              <i className="fa fa-phone-slash"></i> {/* End call icon */}
-            </button>
-          </div>
+            {/* Controls */}
+            <div className="controls">
+              <button onClick={toggleCamera} className="controlButton" title={isCameraOn ? "Turn Camera Off" : "Turn Camera On"}>
+                <i className={`fa ${isCameraOn ? "fa-video" : "fa-video-slash"}`}></i>
+              </button>
+              <button onClick={toggleMic} className="controlButton" title={isMicOn ? "Mute Mic" : "Unmute Mic"}>
+                <i className={`fa ${isMicOn ? "fa-microphone" : "fa-microphone-slash"}`}></i>
+              </button>
+              <button
+                onClick={screenStream ? stopScreenSharing : startScreenSharing}
+                className="controlButton"
+                title={screenStream ? "Stop Screen Sharing" : "Start Screen Sharing"}
+              >
+                <i className={`fa ${screenStream ? "fa-stop" : "fa-share-square"}`}></i>
+              </button>
+              <button onClick={handleExitRoom} className="controlButton" title="End Call">
+                <i className="fa fa-phone-slash"></i>
+              </button>
+              <button
+                onClick={recorder ? stopRecording : startRecording}
+                className="controlButton"
+              >
+                {recorder ? "Stop Recording" : "Start Recording"}
+              </button>
+              {recordedChunks.length > 0 && (
+                <button onClick={downloadRecording} className="controlButton">
+                  Download Recording
+                </button>
+              )}
+              {/* Raise/Lower Hand Button */}
+              <button
+                onClick={toggleRaiseHand}
+                className="controlButton"
+                title={raisedHands.includes(username) ? "Lower Hand" : "Raise Hand"}
+              >
+                <i
+                  className={`fa ${
+                    raisedHands.includes(username) ? "fa-hand-paper" : "fa-hand-paper-o"
+                  }`}
+                ></i>
+              </button>
+            </div>
 
-          {/* Emoji Reactions */}
-          <div>
-            <button onClick={() => sendEmojiReaction('😊')} className="emojiButton">
-              😊
-            </button>
-            <button onClick={() => sendEmojiReaction('👍')} className="emojiButton">
-              👍
-            </button>
-            <button onClick={() => sendEmojiReaction('🎉')} className="emojiButton">
-              🎉
-            </button>
-          </div>
+            {/* User List */}
+            <div className="userList">
+              <h3>Users in Room:</h3>
+              <ul>
+                {users.map((user, index) => (
+                  <li key={index}>
+                    {user}
+                    {raisedHands.includes(user) && <span className="raisedHand">✋</span>}
+                  </li>
+                ))}
+              </ul>
+            </div>
 
-          {/* Display Emoji Reactions */}
-          <div className="emojiReactions">
-            <h3>Emoji Reactions:</h3>
+            {/* Emoji Reactions */}
             <div>
-              {emojiReactions.map((emoji, index) => (
-                <span key={index} className="emoji">
-                  {emoji}
-                </span>
-              ))}
+              <button onClick={() => sendEmojiReaction('😊')} className="emojiButton">
+                😊
+              </button>
+              <button onClick={() => sendEmojiReaction('👍')} className="emojiButton">
+                👍
+              </button>
+              <button onClick={() => sendEmojiReaction('🎉')} className="emojiButton">
+                🎉
+              </button>
+            </div>
+
+            {/* Display Emoji Reactions */}
+            <div className="emojiReactions">
+              <h3>Emoji Reactions:</h3>
+              <div>
+                {emojiReactions.map((emoji, index) => (
+                  <span key={index} className="emoji">
+                    {emoji}
+                  </span>
+                ))}
+              </div>
             </div>
           </div>
 
-          {/* Chat Section */}
-          <div className="chatWindow">
-            {messages.map((message, index) => (
-              <div key={index} className="message">
-                <span className="sender">{message.sender}:</span>{' '}
-                <span className="text">{message.text}</span>
-              </div>
-            ))}
-          </div>
+          {/* Right Side: Chat Section */}
+          <div className="chatSection">
+            <div className="chatWindow">
+              {messages.map((message, index) => (
+                <div key={index} className="message">
+                  <span className="sender">{message.sender}:</span>{' '}
+                  <span className="text">{message.text}</span>
+                  <span className="timestamp">{message.timestamp}</span>
+                  {message.isPrivate && <span className="private">(Private to {message.recipient})</span>}
+                </div>
+              ))}
+            </div>
 
-          <input
-            type="text"
-            placeholder="Send a message"
-            className="input"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                sendMessage(e.target.value);
-                e.target.value = '';
-              }
-            }}
-          />
+            <input
+              type="text"
+              placeholder="Send a message"
+              className="input"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  sendMessage(e.target.value);
+                  e.target.value = '';
+                }
+              }}
+            />
+            <input
+              type="text"
+              placeholder="Send a private message"
+              className="input"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  const recipient = prompt("Enter recipient's username:");
+                  if (recipient) {
+                    sendMessage(e.target.value, true, recipient);
+                    e.target.value = '';
+                  }
+                }
+              }}
+            />
+
+            {/* Polling Feature */}
+            <div className="polls">
+              <h3>Polls:</h3>
+              {activePoll && (
+                <div className="poll">
+                  <h4>{activePoll.question}</h4>
+                  <ul>
+                    {activePoll.options.map((option, index) => (
+                      <li key={index}>
+                        {option.text} - {option.votes} votes
+                        <button onClick={() => voteInPoll(polls.indexOf(activePoll), index)}>Vote</button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <button
+                onClick={() => {
+                  const question = prompt("Enter poll question:");
+                  const options = prompt("Enter poll options (comma separated):").split(',');
+                  createPoll(question, options);
+                }}
+                className="controlButton"
+              >
+                Create Poll
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
