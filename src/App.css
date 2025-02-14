@@ -9,11 +9,14 @@ body {
 
 /* Container for content */
 .container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
   text-align: center;
   margin-top: 50px;
-  padding: 20px;
   border-radius: 12px;
-  max-width: 800px;
+  max-width: 1200px;
   margin: 0 auto;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   background-color: #ffffff;
@@ -28,7 +31,130 @@ body {
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
 }
 
-/* Input styles */
+/* Room Container */
+.roomContainer {
+  display: flex;
+  width: 100%;
+  gap: 20px;
+  margin-top: 20px;
+}
+
+/* Video Section */
+.videoSection {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Chat Section */
+.chatSection {
+  width: 300px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Chat Window */
+.chatWindow {
+  flex: 1;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 10px;
+  overflow-y: auto;
+  max-height: 400px;
+  margin-top: 20px;
+}
+
+/* Video Container */
+.videoContainer {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+
+/* Individual Video Styles */
+.video {
+  width: 100%;
+  max-width: 600px;
+  height: 200px;
+  border: 1px solid #ccc;
+  border-radius: 12px;
+  background-color: #000;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s ease;
+}
+
+.video:hover {
+  transform: scale(1.05);
+}
+
+/* Controls */
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+/* Control Buttons */
+.controlButton {
+  padding: 12px 24px;
+  font-size: 16px;
+  font-weight: 500;
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.controlButton:hover {
+  background-color: #2563eb;
+}
+
+/* User List, Emoji Reactions, Polls */
+.userList, .emojiReactions, .polls {
+  margin-top: 20px;
+}
+
+/* Emoji Button */
+.emojiButton {
+  font-size: 24px;
+  padding: 5px;
+  cursor: pointer;
+  margin: 0 5px;
+}
+
+/* Message Styles */
+.message {
+  margin-bottom: 10px;
+  font-size: 16px;
+}
+
+.message .sender {
+  font-weight: bold;
+  color: #3b82f6;
+}
+
+.message .text {
+  color: #111827;
+}
+
+.message .timestamp {
+  font-size: 12px;
+  color: #666;
+}
+
+.message .private {
+  font-size: 12px;
+  color: #ff0000;
+}
+
+/* Input Styles */
 .input {
   padding: 12px;
   font-size: 16px;
@@ -39,7 +165,7 @@ body {
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
-/* Buttons */
+/* Main Buttons */
 .mainButtons {
   display: flex;
   justify-content: center;
@@ -64,84 +190,26 @@ body {
   background-color: #2563eb;
 }
 
-/* Video Container */
-.videoContainer {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 20px;
-  margin-top: 20px;
-}
-
-/* Individual video styles */
-.video {
-  width: 300px;
-  height: 200px;
-  border-radius: 12px;
-  background-color: #000;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-  transition: transform 0.2s ease;
-}
-
-.video:hover {
-  transform: scale(1.05);
-}
-
-/* Controls */
-.controls {
-  display: flex;
-  justify-content: center;
-  margin-top: 20px;
-}
-
-.controlButton {
-  background-color: #ffffff;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  padding: 12px;
-  margin: 0 10px;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-.controlButton:hover {
-  background-color: #e5e7eb;
-}
-
-/* Icon styles */
+/* Icon Styles */
 .icon {
   font-size: 20px;
   color: #111827;
 }
+.roomContainer {
+  display: flex;
+  justify-content: space-between;
+}
 
-/* Chat */
-.chatWindow {
+.videoSection {
+  flex: 1;
+  margin-right: 20px;
+}
+
+.chatSection {
+  flex: 1;
+  max-width: 400px;
+}
+
+.polls {
   margin-top: 20px;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  padding: 10px;
-  max-height: 300px;
-  overflow-y: scroll;
-}
-
-.message {
-  margin-bottom: 10px;
-  font-size: 16px;
-}
-
-.message .sender {
-  font-weight: bold;
-  color: #3b82f6;
-}
-
-.message .text {
-  color: #111827;
-}
-
-/* React button/emoji styling */
-.emojiButton {
-  font-size: 24px;
-  margin: 0 5px;
-  cursor: pointer;
 }
