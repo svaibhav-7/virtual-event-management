@@ -1,11 +1,14 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import './App.css';
+import io from 'socket.io-client';
 
 // Add FontAwesome CDN
 const fontAwesomeCDN = document.createElement("link");
 fontAwesomeCDN.rel = "stylesheet";
 fontAwesomeCDN.href = "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css";
 document.head.appendChild(fontAwesomeCDN);
+
+const socket = io('http://localhost:5000'); // Replace with your server URL
 
 function App() {
   const [roomId, setRoomId] = useState('');
@@ -24,6 +27,7 @@ function App() {
   const [raisedHands, setRaisedHands] = useState([]); // For raise hand feature
   const [polls, setPolls] = useState([]); // For polling feature
   const [activePoll, setActivePoll] = useState(null); // For active poll
+  const [meetLink, setMeetLink] = useState(''); // For meet link
 
   const videoRef = useRef(null); // Ref for camera video
   const screenRef = useRef(null); // Ref for screen-sharing video
@@ -45,6 +49,7 @@ function App() {
   // Handle room join
   const handleJoinRoom = () => {
     if (roomId && username) {
+      socket.emit('join-room', { roomId, username });
       setIsInRoom(true);
       addUser(username); // Add user to the list
       console.log(`Joined room ${roomId} as ${username}`);
@@ -63,6 +68,7 @@ function App() {
     console.log(`Room ${newRoomId} created.`);
     startVideoStream(); // Start video stream when creating room
     sendMessage(`${username} has created the room.`); // Welcome message
+    setMeetLink(`${window.location.origin}/join/${newRoomId}`); // Generate meet link
   };
 
   // Start video stream (getUserMedia)
@@ -98,6 +104,7 @@ function App() {
       setIsMicOn(false);
     }
   };
+
 
   // Start screen sharing
   const startScreenSharing = async () => {
@@ -138,7 +145,7 @@ function App() {
       startVideoStream(); // Start video stream if camera is off
     }
   };
-
+ 
   // Handle microphone toggle
   const toggleMic = () => {
     if (mediaStream) {
@@ -151,10 +158,11 @@ function App() {
   // Handle send emoji reaction
   const sendEmojiReaction = (emoji) => {
     setEmojiReactions((prevReactions) => [...prevReactions, emoji]);
+    socket.emit('send-emoji', { roomId, emoji });
   };
 
   // Handle message sending
-  const sendMessage = (message, isPrivate = false, recipient = null) => {
+  const sendMessage = useCallback((message, isPrivate = false, recipient = null) => {
     const newMessage = {
       sender: username,
       text: message,
@@ -162,8 +170,9 @@ function App() {
       isPrivate,
       recipient,
     };
-    setMessages([...messages, newMessage]);
-  };
+    setMessages((prevMessages) => [...prevMessages, newMessage]);
+    socket.emit('send-message', { roomId, message: newMessage });
+  }, [roomId, username]);
 
   // Handle room exit
   const handleExitRoom = () => {
@@ -175,6 +184,7 @@ function App() {
     setUsername('');
     setMessages([]);
     setEmojiReactions([]);
+    socket.emit('leave-room', { roomId, username });
   };
 
   // Add user to the list
@@ -232,6 +242,7 @@ function App() {
     }
   };
 
+
   // Create poll
   const createPoll = (question, options) => {
     const newPoll = {
@@ -240,6 +251,7 @@ function App() {
     };
     setPolls((prev) => [...prev, newPoll]);
     setActivePoll(newPoll);
+    socket.emit('create-poll', { roomId, poll: newPoll });
   };
 
   // Vote in poll
@@ -249,7 +261,48 @@ function App() {
       updatedPolls[pollIndex].options[optionIndex].votes += 1;
       return updatedPolls;
     });
+    socket.emit('vote-poll', { roomId, pollIndex, optionIndex });
   };
+
+  // Socket event listeners
+  useEffect(() => {
+    socket.on('user-joined', (user) => {
+      addUser(user.username);
+      sendMessage(`${user.username} has joined the room.`);
+    });
+
+    socket.on('user-left', (user) => {
+      removeUser(user.username);
+      sendMessage(`${user.username} has left the room.`);
+    });
+
+    socket.on('receive-message', (message) => {
+      setMessages((prevMessages) => [...prevMessages, message]);
+    });
+
+    socket.on('receive-emoji', (emoji) => {
+      setEmojiReactions((prevReactions) => [...prevReactions, emoji]);
+    });
+
+    socket.on('update-poll', (poll) => {
+      setPolls((prevPolls) => {
+        const updatedPolls = [...prevPolls];
+        const pollIndex = updatedPolls.findIndex((p) => p.question === poll.question);
+        if (pollIndex !== -1) {
+          updatedPolls[pollIndex] = poll;
+        }
+        return updatedPolls;
+      });
+    });
+
+    return () => {
+      socket.off('user-joined');
+      socket.off('user-left');
+      socket.off('receive-message');
+      socket.off('receive-emoji');
+      socket.off('update-poll');
+    };
+  }, [sendMessage]);
 
   return (
     <div className="container">
@@ -320,6 +373,7 @@ function App() {
                 />
               )}
             </div>
+
 
             {/* Controls */}
             <div className="controls">
@@ -401,7 +455,18 @@ function App() {
                 ))}
               </div>
             </div>
+
+            {/* Meet Link */}
+            {meetLink && (
+              <div className="meetLink">
+                <h3>Meet Link:</h3>
+                <a href={meetLink} target="_blank" rel="noopener noreferrer">
+                  {meetLink}
+                </a>
+              </div>
+            )}
           </div>
+
 
           {/* Right Side: Chat Section */}
           <div className="chatSection">
@@ -451,6 +516,7 @@ function App() {
                   <ul>
                     {activePoll.options.map((option, index) => (
                       <li key={index}>
+
                         {option.text} - {option.votes} votes
                         <button onClick={() => voteInPoll(polls.indexOf(activePoll), index)}>Vote</button>
                       </li>
