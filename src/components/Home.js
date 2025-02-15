@@ -1,34 +1,63 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 
-function Home() {
-  const [roomId, setRoomId] = useState('');
-  const navigate = useNavigate();
-
-  const handleCreateRoom = () => {
-    const id = Math.random().toString(36).substr(2, 9);
-    navigate(`/room/${id}`);
-  };
+const Home = ({ roomId, setRoomId, username, setUsername, setIsInRoom, socket }) => {
+  const [isCreatingRoom, setIsCreatingRoom] = useState(false);
 
   const handleJoinRoom = () => {
-    if (roomId) {
-      navigate(`/room/${roomId}`);
+    if (roomId && username) {
+      socket.emit('join-room', { roomId, username });
+      setIsInRoom(true);
     }
+  };
+
+  const handleCreateRoom = () => {
+    const newRoomId = Math.random().toString(36).substr(2, 9);
+    setRoomId(newRoomId);
+    setIsCreatingRoom(false);
+    setIsInRoom(true);
+    socket.emit('create-room', { roomId: newRoomId, username });
   };
 
   return (
     <div>
-      <h1>Virtual Event Management</h1>
-      <button onClick={handleCreateRoom}>Create Room</button>
-      <input
-        type="text"
-        placeholder="Enter Room ID"
-        value={roomId}
-        onChange={(e) => setRoomId(e.target.value)}
-      />
-      <button onClick={handleJoinRoom}>Join Room</button>
+      {!isCreatingRoom ? (
+        <div>
+          <input
+            type="text"
+            placeholder="Enter Room ID"
+            value={roomId}
+            onChange={(e) => setRoomId(e.target.value)}
+            className="input"
+          />
+          <input
+            type="text"
+            placeholder="Enter Your Name"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            className="input"
+          />
+          <div className="mainButtons">
+            <button onClick={handleJoinRoom} className="button">
+              Join Room
+            </button>
+            <button onClick={() => setIsCreatingRoom(true)} className="button">
+              Create Room
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div>
+          <h3>Creating Room...</h3>
+          <button onClick={handleCreateRoom} className="button">
+            Create Room with ID: {roomId}
+          </button>
+          <button onClick={() => setIsCreatingRoom(false)} className="button">
+            Cancel
+          </button>
+        </div>
+      )}
     </div>
   );
-}
+};
 
 export default Home;
