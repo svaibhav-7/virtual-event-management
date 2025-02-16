@@ -1,126 +1,35 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Virtual Event Management</title>
-    <link
-      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap"
-      rel="stylesheet"
-    />
-    <style>
-      body {
-        font-family: 'Poppins', sans-serif;
-        background-color: #f0f2f5;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 100vh;
-        margin: 0;
-      }
-
-      #root {
-        background-color: white;
-        padding: 40px 60px;
-        border-radius: 10px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        text-align: center;
-        width: 100%;
-        max-width: 400px;
-      }
-
-      h1 {
-        color: #007bff;
-        margin-bottom: 20px;
-        font-size: 2rem;
-        font-weight: 600;
-      }
-
-      p {
-        color: #555;
-        margin-bottom: 30px;
-        font-size: 1rem;
-        font-weight: 300;
-      }
-
-      input[type="text"] {
-        width: 100%;
-        padding: 12px;
-        margin-bottom: 20px;
-        border: 2px solid #ddd;
-        border-radius: 5px;
-        font-size: 1rem;
-        transition: border-color 0.3s;
-      }
-
-      input[type="text"]:focus {
-        border-color: #007bff;
-        outline: none;
-      }
-
-      button {
-        width: 100%;
-        padding: 12px;
-        font-size: 1rem;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-        margin-bottom: 15px;
-        transition: background-color 0.3s;
-      }
-
-      #joinRoomButton {
-        background-color: #007bff;
-        color: white;
-      }
-
-      #joinRoomButton:hover {
-        background-color: #0056b3;
-      }
-
-      #createRoomButton {
-        background-color: #28a745;
-        color: white;
-      }
-
-      #createRoomButton:hover {
-        background-color: #218838;
-      }
-
-      @media (max-width: 480px) {
-        #root {
-          padding: 20px 30px;
-        }
-      }
-    </style>
-  </head>
-  <body>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="app.css">
+</head>
+<body>
     <div id="root">
-      <h1>Virtual Event Management</h1>
-      <p>Seamlessly manage your online events.</p>
-      <input type="text" id="roomIdInput" placeholder="Enter Room ID" />
-      <button id="joinRoomButton">Join Room</button>
-      <button id="createRoomButton">Create a New Room</button>
+        <h1>Virtual Event Management</h1>
+        <p>Seamlessly manage your online events.</p>
+        <input type="text" id="roomIdInput" placeholder="Enter Room ID">
+        <button id="joinRoomButton">Join Room</button>
+        <button id="createRoomButton">Create a New Room</button>
     </div>
 
     <script>
-      document
-        .getElementById('createRoomButton')
-        .addEventListener('click', () => {
-          alert('Create Room functionality coming soon!');
+        document.getElementById('createRoomButton').addEventListener('click', () => {
+            alert('Create Room functionality coming soon!');
         });
 
-      document
-        .getElementById('joinRoomButton')
-        .addEventListener('click', () => {
-          const roomId = document.getElementById('roomIdInput').value;
-          if (roomId) {
-            alert(`Joining room: ${roomId}`);
-            window.location.href = `/room/${roomId}`;
-          } else {
-            alert('Please enter a Room ID to join!');
-          }
+        document.getElementById('joinRoomButton').addEventListener('click', () => {
+            const roomId = document.getElementById('roomIdInput').value.trim();
+            if (roomId) {
+                window.location.href = `room.html?roomId=${roomId}`;
+            } else {
+                alert('Please enter a Room ID to join!');
+            }
         });
     </script>
-  </body>
+</body>
 </html>
+
