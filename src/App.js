@@ -17,7 +17,7 @@ function App() {
   const [isInRoom, setIsInRoom] = useState(false);
 
   return (
-    <div className="container">
+    <div>
       <h1 className="heading">Virtual Event Room</h1>
       {!isInRoom ? (
         <Home
