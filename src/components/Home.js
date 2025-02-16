@@ -46,7 +46,7 @@ const Home = ({ roomId, setRoomId, username, setUsername, setIsInRoom, socket })
           </div>
         </div>
       ) : (
-        <div>
+        <div classname="create-Room">
           <h3>Creating Room...</h3>
           <button onClick={handleCreateRoom} className="button">
             Create Room with ID: {roomId}
