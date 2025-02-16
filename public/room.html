@@ -1,112 +1,65 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Virtual Event Room</title>
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        background-color: #202124;
-        color: #e8eaed;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        height: 100vh;
-        margin: 0;
-      }
-
-      video {
-        width: 600px;
-        max-width: 100%;
-        margin-bottom: 20px;
-        border: 2px solid #e8eaed;
-        border-radius: 8px;
-      }
-
-      button {
-        padding: 10px 15px;
-        margin: 5px;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 1rem;
-        color: #fff;
-      }
-
-      #muteButton {
-        background-color: #ea4335;
-      }
-
-      #cameraButton {
-        background-color: #fbbc05;
-      }
-
-      #leaveButton {
-        background-color: #34a853;
-      }
-    </style>
-  </head>
-  <body>
+    <link rel="stylesheet" href="app.css">
+</head>
+<body>
     <h1>Room Controls</h1>
     <video id="videoElement" autoplay playsinline></video>
     <div>
-      <button id="muteButton">Mute</button>
-      <button id="cameraButton">Turn Camera Off</button>
-      <button id="leaveButton">Leave Room</button>
+        <button id="muteButton">Mute</button>
+        <button id="cameraButton">Turn Camera Off</button>
+        <button id="leaveButton">Leave Room</button>
     </div>
 
     <script>
-      // Wait until the DOM is fully loaded
-      document.addEventListener('DOMContentLoaded', () => {
-        const videoElement = document.getElementById('videoElement');
-        const muteButton = document.getElementById('muteButton');
-        const cameraButton = document.getElementById('cameraButton');
-        const leaveButton = document.getElementById('leaveButton');
+        document.addEventListener('DOMContentLoaded', () => {
+            const videoElement = document.getElementById('videoElement');
+            const muteButton = document.getElementById('muteButton');
+            const cameraButton = document.getElementById('cameraButton');
+            const leaveButton = document.getElementById('leaveButton');
 
-        let localStream;
-        let audioEnabled = true;
-        let videoEnabled = true;
+            let localStream;
+            let audioEnabled = true;
+            let videoEnabled = true;
 
-        // Start the video stream
-        navigator.mediaDevices
-          .getUserMedia({ video: true, audio: true })
-          .then((stream) => {
-            localStream = stream;
-            videoElement.srcObject = stream;
-          })
-          .catch((error) => {
-            console.error('Error accessing media devices.', error);
-            alert('Could not access camera or microphone. Please check your permissions.');
-          });
+            navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+                .then((stream) => {
+                    localStream = stream;
+                    videoElement.srcObject = stream;
+                })
+                .catch((error) => {
+                    console.error('Error accessing media devices.', error);
+                    alert('Could not access camera or microphone. Please check your permissions.');
+                });
 
-        // Toggle mute/unmute
-        muteButton.addEventListener('click', () => {
-          if (localStream) {
-            audioEnabled = !audioEnabled;
-            localStream.getAudioTracks()[0].enabled = audioEnabled;
-            muteButton.textContent = audioEnabled ? 'Mute' : 'Unmute';
-          }
+            muteButton.addEventListener('click', () => {
+                if (localStream) {
+                    audioEnabled = !audioEnabled;
+                    localStream.getAudioTracks()[0].enabled = audioEnabled;
+                    muteButton.textContent = audioEnabled ? 'Mute' : 'Unmute';
+                }
+            });
+
+            cameraButton.addEventListener('click', () => {
+                if (localStream) {
+                    videoEnabled = !videoEnabled;
+                    localStream.getVideoTracks()[0].enabled = videoEnabled;
+                    cameraButton.textContent = videoEnabled ? 'Turn Camera Off' : 'Turn Camera On';
+                }
+            });
+
+            leaveButton.addEventListener('click', () => {
+                if (localStream) {
+                    localStream.getTracks().forEach(track => track.stop());
+                }
+                window.location.href = 'index.html';
+            });
         });
-
-        // Toggle camera on/off
-        cameraButton.addEventListener('click', () => {
-          if (localStream) {
-            videoEnabled = !videoEnabled;
-            localStream.getVideoTracks()[0].enabled = videoEnabled;
-            cameraButton.textContent = videoEnabled ? 'Turn Camera Off' : 'Turn Camera On';
-          }
-        });
-
-        // Leave room
-        leaveButton.addEventListener('click', () => {
-          if (localStream) {
-            localStream.getTracks().forEach((track) => track.stop());
-          }
-          window.location.href = 'index.html'; // Redirect back to the main page
-        });
-      });
     </script>
-  </body>
+</body>
 </html>
+
