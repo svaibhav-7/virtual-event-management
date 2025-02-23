@@ -27,7 +27,7 @@ body {
   font-size: 36px;
   color: #3b82f6;
   margin-bottom: 20px;
-  margin-left: 450px;
+  text-align: center;
   font-weight: bold;
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
 }
@@ -103,8 +103,6 @@ body {
   margin-right: 10px; /* Adjust spacing as needed */
 }
 
-
-
 /* Video Container */
 .videoContainer {
   display: flex;
@@ -131,15 +129,22 @@ body {
   margin-top: 5px;
 }
 
-.create-Room{
+.create-Room {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  max-width: 400px;
-  background-color: #ffffff;
-  padding: 8px;
+  gap: 10px;
+  margin-top: 20px;
 }
+
+.create-Room h3 {
+  margin-bottom: 10px;
+}
+
+.create-Room .button {
+  margin: 5px 0;
+}
+
 .chat-input {
   display: flex;
   align-items: center;
