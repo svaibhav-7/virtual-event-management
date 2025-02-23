@@ -46,14 +46,16 @@ const Home = ({ roomId, setRoomId, username, setUsername, setIsInRoom, socket })
           </div>
         </div>
       ) : (
-        <div classname="create-Room">
+        <div className="create-Room">
           <h3>Creating Room...</h3>
-          <button onClick={handleCreateRoom} className="button">
-            Create Room with ID: {roomId}
-          </button>
-          <button onClick={() => setIsCreatingRoom(false)} className="button">
-            Cancel
-          </button>
+          <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+            <button onClick={handleCreateRoom} className="button">
+              Create Room with ID: {roomId}
+            </button>
+            <button onClick={() => setIsCreatingRoom(false)} className="button">
+              Cancel
+            </button>
+          </div>
         </div>
       )}
     </div>
