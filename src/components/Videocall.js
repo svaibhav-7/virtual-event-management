@@ -28,8 +28,6 @@ const VideoCall = ({
   const screenRef = useRef(null);
   const [activeSpeaker, setActiveSpeaker] = useState(null);
 
-  const [chatMessages, setChatMessages] = useState([]);
-  const [newMessage, setNewMessage] = useState("");
 
   // Attach media streams to video elements
   useEffect(() => {
@@ -170,12 +168,7 @@ const VideoCall = ({
   };
 
   // Chat functions
-  const sendChatMessage = () => {
-    if (newMessage.trim()) {
-      setChatMessages([...chatMessages, { sender: username, text: newMessage, timestamp: new Date() }]);
-      setNewMessage("");
-    }
-  };
+  
 
   // Component for remote participant's video (placeholder)
   const ParticipantVideo = ({ user }) => (
@@ -254,25 +247,7 @@ const VideoCall = ({
       </div>
 
       {/* Chat Section */}
-      <div className="chat-section">
-        <div className="chat-window">
-          {chatMessages.map((msg, i) => (
-            <div key={i} className="message">
-              <strong>{msg.sender}:</strong> {msg.text} <span className="timestamp">{msg.timestamp.toLocaleTimeString()}</span>
-            </div>
-          ))}
-        </div>
-        <div className="chat-input">
-          <input
-            type="text"
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            onKeyPress={(e) => e.key === "Enter" && sendChatMessage()}
-            placeholder="Message for all..."
-          />
-          <button onClick={sendChatMessage}>Send</button>
-        </div>
-      </div>
+      
 
       {/* Additional Features */}
       <div className="additional-features">
@@ -323,4 +298,3 @@ const VideoCall = ({
 };
 
 export default VideoCall;
-
