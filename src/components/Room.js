@@ -16,7 +16,10 @@ const Room = ({ roomId, username, setIsInRoom, socket }) => {
   const [users, setUsers] = useState([]);
   const [raisedHands, setRaisedHands] = useState([]);
   const [welcomeMessage, setWelcomeMessage] = useState("");
+  const [newMessage, setNewMessage] = useState("");
+  const [privateMessage, setPrivateMessage] = useState("");
   
+
   // Meeting link (for sharing)
   const meetLink = `http://localhost:3000?roomId=${roomId}`;
 
@@ -238,17 +241,33 @@ const Room = ({ roomId, username, setIsInRoom, socket }) => {
             </div>
           ))}
         </div>
-        <input
-          type="text"
-          placeholder="Send a message"
-          className="input"
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && e.target.value.trim()) {
-              sendMessage(e.target.value);
-              e.target.value = "";
-            }
-          }}
-        />
+        <div className="sendMessageContainer">
+          <input
+            type="text"
+            placeholder="Send a message"
+            className="messageInput"
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && newMessage.trim()) {
+                sendMessage(newMessage);
+                setNewMessage("");
+              }
+            }}
+          />
+          <button
+            className="sendButton"
+            onClick={() => {
+              if (newMessage.trim()) {
+                sendMessage(newMessage);
+                setNewMessage("");
+              }
+            }}
+          >
+            Send
+          </button>
+        </div>
+        <div className="sendMessageContainer">
         <input
           type="text"
           placeholder="Send a private message"
@@ -263,6 +282,18 @@ const Room = ({ roomId, username, setIsInRoom, socket }) => {
             }
           }}
         />
+          <button
+            className="sendButton"
+            onClick={() => {
+              if (privateMessage.trim()){
+                sendMessage(privateMessage, true);
+                setPrivateMessage("");
+              }
+            }}
+          >
+            Send Private
+          </button>
+        </div>
       </div>
 
       {/* Polls Section */}
@@ -304,4 +335,3 @@ const Room = ({ roomId, username, setIsInRoom, socket }) => {
 };
 
 export default Room;
-
