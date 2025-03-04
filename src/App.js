@@ -3,6 +3,7 @@ import './App.css';
 import io from 'socket.io-client';
 import Home from './components/Home';
 import Room from './components/Room';
+import Auth from './components/Auth'; 
 
 const fontAwesomeCDN = document.createElement("link");
 fontAwesomeCDN.rel = "stylesheet";
@@ -15,11 +16,14 @@ function App() {
   const [roomId, setRoomId] = useState('');
   const [username, setUsername] = useState('');
   const [isInRoom, setIsInRoom] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false); 
 
   return (
-    <div>
+    <div className="app">
       <h1 className="heading">Virtual Event Room</h1>
-      {!isInRoom ? (
+      {!isAuthenticated ? (
+        <Auth setIsAuthenticated={setIsAuthenticated} /> 
+      ) : !isInRoom ? (
         <Home
           roomId={roomId}
           setRoomId={setRoomId}
