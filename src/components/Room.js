@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from "react";
 import VideoCall from "./Videocall";
 
 const Room = ({ roomId, username, setIsInRoom, socket }) => {
-  // State variables for room features
   const [messages, setMessages] = useState([]);
   const [mediaStream, setMediaStream] = useState(null);
   const [screenStream, setScreenStream] = useState(null);
@@ -19,11 +18,11 @@ const Room = ({ roomId, username, setIsInRoom, socket }) => {
   const [newMessage, setNewMessage] = useState("");
   const [privateMessage, setPrivateMessage] = useState("");
   
+  const meetLink = `${window.location.origin}?roomId=${roomId}`;
 
-  // Meeting link (for sharing)
-  const meetLink = `http://localhost:3000?roomId=${roomId}`;
+  // Initialize room connection
+  
 
-  // Send a message and emit it via socket
   const sendMessage = useCallback(
     (message, isPrivate = false, recipient = null) => {
       const newMessage = {
@@ -39,12 +38,10 @@ const Room = ({ roomId, username, setIsInRoom, socket }) => {
     [roomId, username, socket]
   );
 
-  // Set welcome message for the local user
   useEffect(() => {
     setWelcomeMessage(`Welcome, ${username}!`);
   }, [username]);
 
-  // Poll functions
   const voteInPoll = (pollIndex, optionIndex) => {
     const updatedPolls = [...polls];
     const poll = updatedPolls[pollIndex];
@@ -64,13 +61,11 @@ const Room = ({ roomId, username, setIsInRoom, socket }) => {
     socket.emit("create-poll", { roomId, poll: newPoll });
   };
 
-  // Emoji reaction: update state and notify others
   const sendEmojiReaction = (emoji) => {
     setEmojiReactions((prev) => [...prev, emoji]);
     socket.emit("send-emoji", { roomId, emoji });
   };
 
-  // Toggle raised hand and send a chat message about it
   const toggleRaiseHand = () => {
     if (raisedHands.includes(username)) {
       setRaisedHands((prev) => prev.filter((user) => user !== username));
@@ -81,7 +76,6 @@ const Room = ({ roomId, username, setIsInRoom, socket }) => {
     }
   };
 
-  // End call: stop all media tracks and exit room
   const handleEndCall = () => {
     if (mediaStream) {
       mediaStream.getTracks().forEach((track) => track.stop());
@@ -92,7 +86,6 @@ const Room = ({ roomId, username, setIsInRoom, socket }) => {
     setIsInRoom(false);
   };
 
-  // Toggle microphone independently
   const toggleMic = async () => {
     if (!mediaStream) {
       try {
@@ -114,7 +107,6 @@ const Room = ({ roomId, username, setIsInRoom, socket }) => {
           const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
           setMediaStream((prevStream) => {
             const newStream = new MediaStream();
-            // Preserve existing video tracks
             if (prevStream) {
               prevStream.getVideoTracks().forEach((track) => newStream.addTrack(track));
             }
@@ -129,7 +121,6 @@ const Room = ({ roomId, username, setIsInRoom, socket }) => {
     }
   };
 
-  // Toggle camera: if no stream, request full media; otherwise, toggle video tracks
   const toggleCamera = async () => {
     if (!mediaStream) {
       try {
@@ -148,25 +139,33 @@ const Room = ({ roomId, username, setIsInRoom, socket }) => {
     }
   };
 
-  // Socket event listeners for real-time updates
+  // Socket event listeners
   useEffect(() => {
-    socket.on("user-joined", (user) => {
-      setUsers((prev) => [...prev, user.username]);
-      setWelcomeMessage(`Welcome, ${user.username}!`);
-    });
+    const handleUserJoined = (user) => {
+      if (user.userId !== socket.id) { // Don't add yourself again
+        setUsers((prev) => [...prev, user.username]);
+        setWelcomeMessage(`${user.username} has joined the room!`);
+      }
+    };
 
-    socket.on("user-left", (user) => {
+    const handleUserLeft = (user) => {
       setUsers((prev) => prev.filter((u) => u !== user.username));
-    });
+      setWelcomeMessage(`${user.username} has left the room.`);
+    };
 
+    const handleExistingParticipants = (participants) => {
+      setUsers(participants.map(p => p.username));
+    };
+
+    socket.on("user-joined", handleUserJoined);
+    socket.on("user-left", handleUserLeft);
+    socket.on("existing-participants", handleExistingParticipants);
     socket.on("receive-message", (message) => {
       setMessages((prev) => [...prev, message]);
     });
-
     socket.on("receive-emoji", (emoji) => {
       setEmojiReactions((prev) => [...prev, emoji]);
     });
-
     socket.on("update-poll", (poll) => {
       setPolls((prevPolls) => {
         const updatedPolls = [...prevPolls];
@@ -177,8 +176,9 @@ const Room = ({ roomId, username, setIsInRoom, socket }) => {
     });
 
     return () => {
-      socket.off("user-joined");
-      socket.off("user-left");
+      socket.off("user-joined", handleUserJoined);
+      socket.off("user-left", handleUserLeft);
+      socket.off("existing-participants", handleExistingParticipants);
       socket.off("receive-message");
       socket.off("receive-emoji");
       socket.off("update-poll");
@@ -188,15 +188,7 @@ const Room = ({ roomId, username, setIsInRoom, socket }) => {
   return (
     <div className="roomContainer">
       {welcomeMessage && (
-        <div
-          className="welcomeMessage"
-          style={{
-            fontFamily: "Arial, sans-serif",
-            fontSize: "20px",
-            fontWeight: "bold",
-            marginBottom: "10px",
-          }}
-        >
+        <div className="welcomeMessage">
           {welcomeMessage}
         </div>
       )}
@@ -227,6 +219,8 @@ const Room = ({ roomId, username, setIsInRoom, socket }) => {
         toggleCamera={toggleCamera}
       />
 
+      
+
       {/* Chat Section */}
       <div className="chatSection">
         <div className="chatWindow">
@@ -241,6 +235,8 @@ const Room = ({ roomId, username, setIsInRoom, socket }) => {
             </div>
           ))}
         </div>
+        
+
         <div className="sendMessageContainer">
           <input
             type="text"
@@ -267,6 +263,8 @@ const Room = ({ roomId, username, setIsInRoom, socket }) => {
             Send
           </button>
         </div>
+
+        
         <div className="sendMessageContainer">
         <input
           type="text"
@@ -298,7 +296,6 @@ const Room = ({ roomId, username, setIsInRoom, socket }) => {
 
       {/* Polls Section */}
       <div className="polls">
-        <h3>Polls:</h3>
         {activePoll && (
           <div className="poll">
             <h4>{activePoll.question}</h4>
@@ -327,7 +324,7 @@ const Room = ({ roomId, username, setIsInRoom, socket }) => {
           }}
           className="controlButton"
         >
-          Create Poll
+          Poll
         </button>
       </div>
     </div>
