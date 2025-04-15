@@ -1,4 +1,26 @@
-/* === GENERAL STYLES === */
+/* Video wrapper for positioning */
+.video-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+/* Video and canvas styles */
+.video, canvas.video {
+  width: 100%;
+  max-width: 600px;
+  height: 200px;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  background-color: #000;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s ease;
+  animation: fadeIn 1.3s ease-in-out;
+}
+
+.video:hover, canvas.video:hover {
+  transform: scale(1.05);
+}
+
 body {
   font-family: 'Roboto', Arial, sans-serif;
   background: linear-gradient(135deg, #f0f4f8, #dfe6e9); /* Soft gradient background */
@@ -125,6 +147,8 @@ body {
   margin-top: 0px;
   margin-left: 120px;
   animation: slideIn 0.4s ease-in-out;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 /* === INNER BOX FOR JOIN ROOM, CREATE ROOM, CREATING ROOM === */
@@ -192,6 +216,7 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
+  margin-right: 20px;
 }
 
 /* === CHAT SECTION === */
@@ -204,6 +229,8 @@ body {
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   padding: 15px;
   animation: slideIn 0.5s ease-in-out;
+  flex: 1;
+  max-width: 400px;
 }
 
 /* === CHAT WINDOW === */
@@ -300,6 +327,7 @@ body {
   margin: 5px 0;
 }
 
+/* Consolidated chat input styles */
 .chat-input {
   display: flex;
   align-items: center;
@@ -393,7 +421,7 @@ body {
   transform: scale(1.05);
 }
 
-/* === EMOJI REACTIONS === */
+/* === EMOJI REACTIONS (Consolidated) === */
 .emoji-reactions {
   display: flex;
   justify-content: center;
@@ -430,23 +458,6 @@ body {
   background-color: #c7d2fe; /* Even lighter blue on active */
 }
 
-/* === INDIVIDUAL VIDEO STYLES === */
-.video {
-  width: 100%;
-  max-width: 600px;
-  height: 200px;
-  border: 1px solid #e0e0e0; /* Light border */
-  border-radius: 12px;
-  background-color: #000;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-  transition: transform 0.2s ease;
-  animation: fadeIn 1.3s ease-in-out;
-}
-
-.video:hover {
-  transform: scale(1.05);
-}
-
 /* === CONTROLS === */
 .controls {
   display: flex;
@@ -456,7 +467,8 @@ body {
   animation: fadeIn 1.4s ease-in-out;
 }
 
-.controlButton {
+/* Consolidated button styles */
+.controlButton, .button, .viewButton {
   padding: 12px 24px;
   font-size: 16px;
   font-weight: 500;
@@ -465,11 +477,11 @@ body {
   border: none;
   border-radius: 8px;
   cursor: pointer;
-  transition: background-color 0.3s ease;
+  transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-.controlButton:hover {
+.controlButton:hover, .button:hover {
   background-color: #5a72e0; /* Darker blue on hover */
 }
 
@@ -483,16 +495,10 @@ body {
 }
 
 .viewButton {
+  background: linear-gradient(135deg, #6a82fb, #4a90e2); /* Soft blue gradient */
   padding: 10px 16px;
   font-size: 14px;
   font-weight: bold;
-  background: linear-gradient(135deg, #6a82fb, #4a90e2); /* Soft blue gradient */
-  color: white;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: background 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
-  box-shadow: 0 4px 8px rgba(106, 130, 251, 0.5);
 }
 
 .viewButton:hover {
@@ -505,16 +511,7 @@ body {
   transform: scale(0.95);
 }
 
-/* === EMOJI REACTIONS (MODERN & INTERACTIVE) === */
-.Emoji-Reactions {
-  display: flex;
-  justify-content: center;
-  margin-top: 15px;
-  gap: 12px;
-  margin-bottom: 20px;
-  animation: fadeIn 1.6s ease-in-out;
-}
-
+/* === EMOJI BUTTON STYLES === */
 .emojiButton {
   font-size: 28px;
   padding: 10px;
@@ -536,6 +533,10 @@ body {
 .userList, .emojiReactions, .polls {
   margin-top: 20px;
   animation: fadeIn 1.7s ease-in-out;
+}
+
+.polls {
+  margin-top: 5px;
 }
 
 /* === MESSAGE STYLES === */
@@ -587,45 +588,73 @@ body {
   animation: fadeIn 2s ease-in-out;
 }
 
-.button {
-  padding: 12px 24px;
-  font-size: 16px;
-  font-weight: 500;
-  background-color: #6a82fb; /* Soft blue */
-  color: white;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-.button:hover {
-  background-color: #5a72e0; /* Darker blue on hover */
-}
-
 /* === ICON STYLES === */
 .icon {
   font-size: 20px;
   color: #333333;
 }
 
-/* === ROOM CONTAINER === */
-.roomContainer {
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-.videoSection {
-  flex: 1;
-  margin-right: 20px;
-}
-
-.chatSection {
-  flex: 1;
-  max-width: 400px;
-}
-
-.polls {
+.captured-photo {
   margin-top: 20px;
+  text-align: center;
+}
+
+/* Recording controls */
+.recording-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+}
+
+.rec-dot {
+  color: #FF3333;
+  font-size: 12px;
+  margin-right: 4px;
+}
+
+.recording-indicator {
+  color: #FF3333;
+  font-size: 10px;
+  font-weight: bold;
+  margin-left: 4px;
+  animation: blink 1s infinite;
+}
+
+.stop-recording {
+  background-color: rgba(255, 51, 51, 0.2);
+  border-color: #FF3333;
+}
+
+@keyframes blink {
+  0% { opacity: 1; }
+  50% { opacity: 0.5; }
+  100% { opacity: 1; }
+}
+
+/* Small poll button styling */
+.pollButton {
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  background-color: #6a82fb;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin-top: 10px;
+  margin-bottom: 10px;
+  width: auto;
+  display: inline-block;
+}
+
+.pollButton:hover {
+  background-color: #5a72e0;
+  transform: scale(1.05);
+}
+
+.pollButton:active {
+  transform: scale(0.98);
 }
